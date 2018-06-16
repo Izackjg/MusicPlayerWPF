@@ -7,6 +7,8 @@ using System.Windows.Threading;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using NAudio.Wave;
+using MusicPlayer.Properties;
+using System.Windows.Input;
 
 namespace MusicPlayer
 {
@@ -27,11 +29,9 @@ namespace MusicPlayer
         private bool muted = false;
         private bool nightMode = false;
         private bool shuffle = false;
-        private bool loopSong = false;
+        private bool repeat = false;
         private bool paused = true;
         private bool firstOpen = true;
-
-        private bool preload = true;
 
         #endregion
 
@@ -41,8 +41,12 @@ namespace MusicPlayer
         {
             InitializeComponent();
 
+            AddHandler(Keyboard.KeyDownEvent, (KeyEventHandler)HandleKeyDownEvent);
+
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
             player.MediaEnded += playerMediaEnded;
-            player.Volume = 0.1;
+            player.Volume = DefaultSettings.DefaultVolume;
 
             timer = new DispatcherTimer();
             timer.Interval = TimeSpan.FromSeconds(1);
@@ -50,7 +54,15 @@ namespace MusicPlayer
 
             MusicQueue = new ObservableCollection<MusicFile>();
             AddSymbols();
-            NormalModeInterface();
+
+            if (TimeBetween(DateTime.Now, DefaultSettings.StartNightMode, DefaultSettings.StopNightMode))
+            {
+                nightMode = true;
+                NightModeInterface();
+            }
+            else
+                NormalModeInterface();
+
         }
 
         #endregion
@@ -69,45 +81,51 @@ namespace MusicPlayer
             if (paused)
             {
                 player.Pause();
-                btnPlayPause.Content = Settings.PlaySymbol;
+                btnPlayPause.Content = DefaultSettings.PlaySymbol;
             }
             // paused = false -> playing
             else
             {
                 timer.Start();
                 player.Play();
-                btnPlayPause.Content = Settings.PauseSymbol;
+                btnPlayPause.Content = DefaultSettings.PauseSymbol;
             }
         }
 
         private void btnNextTrack_Click(object sender, RoutedEventArgs e)
         {
-            if (currentSong + 1 == MusicQueue.Count || MusicQueue.Count == 0)
+            if (MusicQueue.Count == 0)
                 return;
-            PlaySong(currentSong += 1);
 
-            //currentSong++;
-            //dataGrid.SelectedIndex = currentSong;
-            //lblMaxTime.Content = MusicQueue[currentSong].Duration.ToString(Settings.TimeSpanFormat);
-            //lblCurrentlyPlaying.Content = "Currently Playing: " + MusicQueue[currentSong].Title;
-            //musicProgress.Maximum = MusicQueue[currentSong].Duration.TotalSeconds;
-            //player.Open(new Uri(MusicQueue[currentSong].FilePath));
-            //player.Play();
+            if (currentSong + 1 == MusicQueue.Count)
+                currentSong = -1;
+
+            if (shuffle)
+            {
+                currentSong = new Random().Next(0, MusicQueue.Count + 1);
+                PlaySong(currentSong);
+            }
+
+            else
+                PlaySong(currentSong += 1);
         }
 
         private void btnLastTrack_Click(object sender, RoutedEventArgs e)
         {
-            if (currentSong == 0)
+            if (MusicQueue.Count == 0)
                 return;
-            PlaySong(currentSong -= 1);
 
-            //currentSong--;
-            //dataGrid.SelectedIndex = currentSong;
-            //lblMaxTime.Content = MusicQueue[currentSong].Duration.ToString(Settings.TimeSpanFormat);
-            //lblCurrentlyPlaying.Content = "Currently Playing: " + MusicQueue[currentSong].Title;
-            //musicProgress.Maximum = MusicQueue[currentSong].Duration.TotalSeconds;
-            //player.Open(new Uri(MusicQueue[currentSong].FilePath));
-            //player.Play();
+            if (currentSong == 0)
+                currentSong = MusicQueue.Count;
+
+            if (shuffle)
+            {
+                currentSong = new Random().Next(0, MusicQueue.Count + 1);
+                PlaySong(currentSong);
+            }
+
+            else
+                PlaySong(currentSong -= 1);
         }
 
         #endregion
@@ -116,10 +134,10 @@ namespace MusicPlayer
 
         private void btnRepeat_Click(object sender, RoutedEventArgs e)
         {
-            loopSong = !loopSong;
+            repeat = !repeat;
 
-            if (loopSong)
-                btnRepeat.Foreground = Settings.GreenForeground;
+            if (repeat)
+                btnRepeat.Foreground = DefaultSettings.GreenForeground;
             else
                 CheckNightMode(btnRepeat);
 
@@ -130,7 +148,7 @@ namespace MusicPlayer
             shuffle = !shuffle;
 
             if (shuffle)
-                btnShuffle.Foreground = Settings.GreenForeground;
+                btnShuffle.Foreground = DefaultSettings.GreenForeground;
 
             else
                 CheckNightMode(btnShuffle);
@@ -148,11 +166,12 @@ namespace MusicPlayer
             if (muted)
             {
                 player.Volume = 0;
-                btnMute.Foreground = Settings.MutedForeground;
+                btnMute.Content = DefaultSettings.MuteSymbol;
             }
             else
             {
-                player.Volume = 0.2;
+                player.Volume = DefaultSettings.DefaultVolume;
+                btnMute.Content = DefaultSettings.SpeakerSymbol;
                 CheckNightMode(btnMute);
             }
         }
@@ -177,16 +196,23 @@ namespace MusicPlayer
             string[] fileDirectories;
             TimeSpan duration = new TimeSpan();
 
-            if (preload)
+            if (Settings.Default.PreloadOnClick && firstOpen)
             {
-                PreloadSongs(Settings.DefaultFileDir);
-                musicProgress.Maximum = MusicQueue[currentSong].Duration.TotalSeconds;
-                lblMaxTime.Content = MusicQueue[currentSong].Duration.ToString(Settings.TimeSpanFormat);
-                dataGrid.ItemsSource = MusicQueue;
-                player.Open(new Uri(MusicQueue[currentSong].FilePath));
-                firstOpen = false;
-                preload = false;
+                try
+                {
+                    PreloadSongs(Settings.Default.PreloadDirectory);
+                    musicProgress.Maximum = MusicQueue[currentSong].Duration.TotalSeconds;
+                    lblMaxTime.Content = MusicQueue[currentSong].Duration.ToString(DefaultSettings.TimeSpanFormat);
+                    dataGrid.ItemsSource = MusicQueue;
+                    player.Open(new Uri(MusicQueue[currentSong].FilePath));
+                    firstOpen = false;                   
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error Loading Files", "File Loading Error");
+                }
             }
+
             else
             {
                 try
@@ -194,20 +220,20 @@ namespace MusicPlayer
                     OpenFileDialog ofd = new OpenFileDialog();
                     ofd.Multiselect = true;
                     ofd.Filter = "MP3 Files (*.mp3)|*.mp3";
-                    ofd.InitialDirectory = Settings.DefaultFileDir;
+                    ofd.InitialDirectory = Settings.Default.OpenDirecory;
                     if (ofd.ShowDialog() == true)
                     {
                         fileDirectories = ofd.FileNames;
-
                         foreach (string fileDir in fileDirectories)
                         {
                             currentDirectory = fileDir;
                             fileName = FormatFileName(fileDir);
                             duration = GetMP3Time(fileDir);
 
-                            MusicQueue.Add(new MusicFile(fileName, currentDirectory, duration));
-                            musicProgress.Maximum = MusicQueue[currentSong].Duration.TotalSeconds;
-                            lblMaxTime.Content = MusicQueue[currentSong].Duration.ToString(Settings.TimeSpanFormat);
+                            MusicFile currentNew = new MusicFile(fileName, currentDirectory, duration);
+                            MusicQueue.Add(currentNew);
+                            musicProgress.Maximum = currentNew.Duration.TotalSeconds + DefaultSettings.Buffer;
+                            lblMaxTime.Content = currentNew.Duration.TotalSeconds.ToString(DefaultSettings.TimeSpanFormat);
                         }
 
                         dataGrid.SelectedIndex = currentSong;
@@ -229,12 +255,21 @@ namespace MusicPlayer
 
         #region Created Events
 
+        private void HandleKeyDownEvent(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.S && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == (ModifierKeys.Control | ModifierKeys.Shift))
+            {
+                SettingsWindow settingsWindow = new SettingsWindow();
+                settingsWindow.ShowDialog();
+            }
+        }
+
         private void Timer_Tick(object sender, EventArgs e)
         {
             if (!paused)
             {
                 musicProgress.Value = player.Position.TotalSeconds;
-                lblCurrentProgress.Content = player.Position.ToString(Settings.TimeSpanFormat);
+                lblCurrentProgress.Content = player.Position.ToString(DefaultSettings.TimeSpanFormat);
             }
         }
 
@@ -242,30 +277,26 @@ namespace MusicPlayer
         {
             try
             {
-                if (loopSong)
+                if (repeat)
                 {
                     player.Position = TimeSpan.Zero;
                     player.Play();
-                    //return;
                 }
 
                 else if (shuffle)
                 {
-                    //currentSong = new Random().Next(0, MusicQueue.Count + 1);
-                    PlaySong(new Random().Next(0, MusicQueue.Count + 1));
-                    //return;
+                    currentSong = new Random().Next(0, MusicQueue.Count + 1);
+                    if (MusicQueue[currentSong].BeenPlayed)
+                        currentSong = new Random().Next(0, MusicQueue.Count + 1);
+                    PlaySong(currentSong);
                 }
-
                 else
                 {
+                    if (currentSong + 1 == MusicQueue.Count)
+                        currentSong = -1;
+
                     currentSong++;
                     PlaySong(currentSong);
-                    //dataGrid.SelectedIndex = currentSong;
-                    //lblMaxTime.Content = MusicQueue[currentSong].Duration.ToString(Settings.TimeSpanFormat);
-                    //lblCurrentlyPlaying.Content = "Currently Playing: " + MusicQueue[currentSong].Title;
-                    //musicProgress.Maximum = MusicQueue[currentSong].Duration.TotalSeconds;
-                    //player.Open(new Uri(MusicQueue[currentSong].FilePath));
-                    //player.Play();               
                 }
             }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
@@ -277,11 +308,11 @@ namespace MusicPlayer
 
         private void AddSymbols()
         {
-            btnNextTrack.Content = Settings.NextTrack;
-            btnPlayPause.Content = Settings.PlaySymbol;
-            btnLastTrack.Content = Settings.LastTrack;
-            btnShuffle.Content = Settings.Shuffle;
-            btnRepeat.Content = Settings.RepeatOnce;
+            btnNextTrack.Content = DefaultSettings.NextTrack;
+            btnPlayPause.Content = DefaultSettings.PlaySymbol;
+            btnLastTrack.Content = DefaultSettings.LastTrack;
+            btnShuffle.Content = DefaultSettings.Shuffle;
+            btnRepeat.Content = DefaultSettings.RepeatOnce;
         }
 
         private void CheckNightMode(Control c1)
@@ -290,40 +321,47 @@ namespace MusicPlayer
                 return;
 
             if (nightMode)
-                c1.Foreground = Settings.ButtonForegroundNight;
+                c1.Foreground = DefaultSettings.ButtonForegroundNight;
             else
-                c1.Foreground = Settings.ButtonForeground;
+                c1.Foreground = DefaultSettings.ButtonForeground;
         }
 
         private void NormalModeInterface()
         {
-            Background = Settings.DefaultBackround;
+            Background = DefaultSettings.DefaultBackround;
 
-            btnAddTrack.Background = Settings.DefaultBackround;
-            btnAddTrack.Foreground = Settings.ButtonForeground;
+            btnAddTrack.Background = DefaultSettings.DefaultBackround;
+            btnAddTrack.Foreground = DefaultSettings.ButtonForeground;
 
-            btnNextTrack.Background = Settings.DefaultBackround;
-            btnNextTrack.Foreground = Settings.ButtonForeground;
+            btnNextTrack.Background = DefaultSettings.DefaultBackround;
+            btnNextTrack.Foreground = DefaultSettings.ButtonForeground;
 
-            btnPlayPause.Background = Settings.DefaultBackround;
-            btnPlayPause.Foreground = Settings.ButtonForeground;
+            btnPlayPause.Background = DefaultSettings.DefaultBackround;
+            btnPlayPause.Foreground = DefaultSettings.ButtonForeground;
 
-            btnLastTrack.Background = Settings.DefaultBackround;
-            btnLastTrack.Foreground = Settings.ButtonForeground;
+            btnLastTrack.Background = DefaultSettings.DefaultBackround;
+            btnLastTrack.Foreground = DefaultSettings.ButtonForeground;
 
-            btnShuffle.Background = Settings.DefaultBackround;
-            btnShuffle.Foreground = Settings.ButtonForeground;
+            btnNightMode.Background = DefaultSettings.DefaultBackround;
+            btnNightMode.Foreground = DefaultSettings.ButtonForeground;
 
-            btnRepeat.Background = Settings.DefaultBackround;
-            btnRepeat.Foreground = Settings.ButtonForeground;
+            btnShuffle.Background = DefaultSettings.DefaultBackround;
+            btnRepeat.Background = DefaultSettings.DefaultBackround;
+            btnMute.Background = DefaultSettings.DefaultBackround;
 
-            btnNightMode.Background = Settings.DefaultBackround;
-            btnNightMode.Foreground = Settings.ButtonForeground;
+            dataGrid.Background = DefaultSettings.DefaultBackround;
 
-            btnMute.Background = Settings.DefaultBackround;
-            btnMute.Foreground = Settings.ButtonForeground;
+            if (!shuffle)
+                btnShuffle.Foreground = DefaultSettings.ButtonForeground;
 
-            dataGrid.Background = Settings.DefaultBackround;
+
+            if (!repeat)
+                btnRepeat.Foreground = DefaultSettings.ButtonForeground;
+
+
+            if (!muted)
+                btnMute.Foreground = DefaultSettings.ButtonForeground;
+
 
             lblCurrentlyPlaying.Foreground = Brushes.Black;
             lblCurrentProgress.Foreground = Brushes.Black;
@@ -333,33 +371,40 @@ namespace MusicPlayer
 
         private void NightModeInterface()
         {
-            Background = Settings.DefaultBackroundNight;
+            Background = DefaultSettings.DefaultBackroundNight;
 
-            btnAddTrack.Background = Settings.DefaultBackroundNight;
-            btnAddTrack.Foreground = Settings.ButtonForegroundNight;
+            btnAddTrack.Background = DefaultSettings.DefaultBackroundNight;
+            btnAddTrack.Foreground = DefaultSettings.ButtonForegroundNight;
 
-            btnNextTrack.Background = Settings.DefaultBackroundNight;
-            btnNextTrack.Foreground = Settings.ButtonForegroundNight;
+            btnNextTrack.Background = DefaultSettings.DefaultBackroundNight;
+            btnNextTrack.Foreground = DefaultSettings.ButtonForegroundNight;
 
-            btnPlayPause.Background = Settings.DefaultBackroundNight;
-            btnPlayPause.Foreground = Settings.ButtonForegroundNight;
+            btnPlayPause.Background = DefaultSettings.DefaultBackroundNight;
+            btnPlayPause.Foreground = DefaultSettings.ButtonForegroundNight;
 
-            btnLastTrack.Background = Settings.DefaultBackroundNight;
-            btnLastTrack.Foreground = Settings.ButtonForegroundNight;
+            btnLastTrack.Background = DefaultSettings.DefaultBackroundNight;
+            btnLastTrack.Foreground = DefaultSettings.ButtonForegroundNight;
 
-            btnShuffle.Background = Settings.DefaultBackroundNight;
-            btnShuffle.Foreground = Settings.ButtonForegroundNight;
+            btnNightMode.Background = DefaultSettings.DefaultBackroundNight;
+            btnNightMode.Foreground = DefaultSettings.ButtonForegroundNight;
 
-            btnRepeat.Background = Settings.DefaultBackroundNight;
-            btnRepeat.Foreground = Settings.ButtonForegroundNight;
+            btnShuffle.Background = DefaultSettings.DefaultBackroundNight;
+            btnRepeat.Background = DefaultSettings.DefaultBackroundNight;
+            btnMute.Background = DefaultSettings.DefaultBackroundNight;
 
-            btnNightMode.Background = Settings.DefaultBackroundNight;
-            btnNightMode.Foreground = Settings.ButtonForegroundNight;
+            dataGrid.Background = DefaultSettings.DefaultGridBackroundNight;
 
-            btnMute.Background = Settings.DefaultBackroundNight;
-            btnMute.Foreground = Settings.ButtonForegroundNight;
+            if (!shuffle)
+                btnShuffle.Foreground = DefaultSettings.ButtonForegroundNight;
 
-            dataGrid.Background = Settings.DefaultGridBackroundNight;
+
+            if (!repeat)
+                btnRepeat.Foreground = DefaultSettings.ButtonForegroundNight;
+
+
+            if (!muted)
+                btnMute.Foreground = DefaultSettings.ButtonForegroundNight;
+
 
             lblCurrentlyPlaying.Foreground = Brushes.White;
             lblCurrentProgress.Foreground = Brushes.White;
@@ -374,10 +419,13 @@ namespace MusicPlayer
         private void PlaySong(int index)
         {
             timer.Start();
+            MusicQueue[index].BeenPlayed = true;
             dataGrid.SelectedIndex = index;
-            lblMaxTime.Content = MusicQueue[index].Duration.ToString(Settings.TimeSpanFormat);
+            object view = dataGrid.Items[index];
+            dataGrid.ScrollIntoView(view);
+            lblMaxTime.Content = MusicQueue[index].Duration.ToString(DefaultSettings.TimeSpanFormat);
             lblCurrentlyPlaying.Content = "Currently Playing: " + MusicQueue[index].Title;
-            musicProgress.Maximum = MusicQueue[index].Duration.TotalSeconds;
+            musicProgress.Maximum = MusicQueue[index].Duration.TotalSeconds + DefaultSettings.Buffer;
             player.Open(new Uri(MusicQueue[index].FilePath));
             player.Play();
         }
@@ -386,7 +434,7 @@ namespace MusicPlayer
         {
             TimeSpan duration = new TimeSpan();
             string fileName = "";
-            string[] fileDirectory = Directory.GetFiles(directory);
+            var fileDirectory = Directory.EnumerateFiles(directory);
 
             foreach (string fileDir in fileDirectory)
             {
@@ -405,6 +453,11 @@ namespace MusicPlayer
             if (start < end)
                 return start <= now && now <= end;
             return !(end < now && now < start);
+        }
+
+        private bool IsStartEndTrack()
+        {
+            return currentSong == 0 || currentSong + 1 == MusicQueue.Count;
         }
 
         private static TimeSpan GetMP3Time(string path)
@@ -433,15 +486,19 @@ namespace MusicPlayer
             return value;
         }
 
+        private void musicProgress_LeftMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (MusicQueue.Count == 0 || paused)
+                return;
+
+            double mousePosition = e.GetPosition(musicProgress).X;
+            musicProgress.Value = SetProgressBarValue(mousePosition);
+            player.Position = new TimeSpan(0, 0, (int)musicProgress.Value);
+        }
+
         private void slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             player.Volume = slider.Value / 100;
-        }
-
-        private void slider_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            double mousePosition = e.GetPosition(musicProgress).X;
-            musicProgress.Value = SetProgressBarValue(mousePosition);
         }
 
         private void dataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -454,7 +511,7 @@ namespace MusicPlayer
             }
 
             paused = false;
-            btnPlayPause.Content = Settings.PauseSymbol;
+            btnPlayPause.Content = DefaultSettings.PauseSymbol;
             currentSong = row.GetIndex();
             PlaySong(currentSong);
         }
