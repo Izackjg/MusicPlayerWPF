@@ -9,6 +9,8 @@ using Microsoft.Win32;
 using NAudio.Wave;
 using MusicPlayer.Properties;
 using System.Windows.Input;
+using System.Windows.Data;
+using System.Collections.Generic;
 
 namespace MusicPlayer
 {
@@ -188,6 +190,32 @@ namespace MusicPlayer
 
         #endregion
 
+        #region Textbox Text Changed
+
+        private void txtFilter_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (txtFilter.Text == "")
+                dataGrid.ItemsSource = MusicQueue;
+
+            try
+            {
+                ListCollectionView collectionView = new ListCollectionView(MusicQueue);
+                collectionView.Filter = (ex) =>
+                {
+                    MusicFile file = ex as MusicFile;
+                    if (file.Title.IsMatch(txtFilter.Text))
+                    {
+                        dataGrid.ItemsSource = collectionView;
+                        return true;
+                    }
+                    return false;
+                };
+            }
+            catch (Exception ee) { MessageBox.Show(ee.Message); }
+        }
+
+        #endregion
+
         #region Add Track
 
         private void btnAddTrack_Click(object sender, RoutedEventArgs e)
@@ -205,7 +233,7 @@ namespace MusicPlayer
                     lblMaxTime.Content = MusicQueue[currentSong].Duration.ToString(DefaultSettings.TimeSpanFormat);
                     dataGrid.ItemsSource = MusicQueue;
                     player.Open(new Uri(MusicQueue[currentSong].FilePath));
-                    firstOpen = false;                   
+                    firstOpen = false;
                 }
                 catch (Exception ex)
                 {
