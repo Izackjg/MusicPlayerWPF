@@ -50,8 +50,18 @@
                                 <!--<Setter Property="BorderBrush" TargetName="border" Value="#FFFFFF"/>-->
                             </Trigger>
                             <Trigger Property="IsPressed" Value="true">
-                                <Setter Property="Background" TargetName="border" Value="{StaticResource Button.Pressed.Background}"/>
-                                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource Button.Pressed.Border}"/>
+                                <Setter Property="RenderTransform" TargetName="border">
+                                    <Setter.Value>
+                                        <TransformGroup>
+                                            <ScaleTransform ScaleX="0.9" ScaleY="0.8"/>
+                                            <SkewTransform AngleX="0.1" AngleY="0.1"/>
+                                            <RotateTransform Angle="0"/>
+                                            <TranslateTransform X="5" Y="5"/>
+                                        </TransformGroup>
+                                    </Setter.Value>
+                                </Setter>
+                                <!--<Setter Property="Background" TargetName="border" Value="{StaticResource Button.Pressed.Background}"/>
+                                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource Button.Pressed.Border}"/>-->
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="false">
                                 <Setter Property="Background" TargetName="border" Value="{StaticResource Button.Disabled.Background}"/>
@@ -132,22 +142,22 @@
         <Button x:Name="btnShuffle" Content="" Margin="84,10,408,0" VerticalAlignment="Top" FontSize="24" Width="50" Height="50" BorderThickness="0,0,0,0" Click="btnShuffle_Click"/>
         <Button x:Name="btnRepeat" Content="" Margin="414,10,78,0" VerticalAlignment="Top" FontSize="24" Width="50" Height="50" BorderThickness="0,0,0,0" Click="btnRepeat_Click"/>
         <Button x:Name="btnAddTrack" Content="+" Margin="484,10,10,0" VerticalAlignment="Top" FontSize="24" Width="50" Height="50" BorderThickness="0,0,0,0" Click="btnAddTrack_Click"/>
-        <DataGrid x:Name="dataGrid" RowHeaderWidth="0" ItemsSource="{Binding MusicQueue}"  Margin="8,200,10,0" VerticalAlignment="Top" Height="245" IsReadOnly="True" CanUserAddRows="False" CanUserResizeColumns="False" CanUserResizeRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False" MouseDoubleClick="dataGrid_MouseDoubleClick">
+        <DataGrid x:Name="dataGrid" RowHeaderWidth="0" ItemsSource="{Binding MusicQueue}"  Margin="8,200,10,0" VerticalAlignment="Top" Height="245" IsReadOnly="True" CanUserSortColumns="False" CanUserAddRows="False" CanUserResizeColumns="False" CanUserResizeRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False" MouseDoubleClick="dataGrid_MouseDoubleClick">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Title" Width="350" Binding="{Binding Title}" />
-                <DataGridTextColumn Header="Duration" Width="*" Binding="{Binding Duration}" />
+                <DataGridTextColumn Header="Duration" Width="*" Binding="{Binding StringDuration}" />
             </DataGrid.Columns>
         </DataGrid>
 
 
-        <ProgressBar Name="musicProgress" Height="10" Margin="85,86,79,0" VerticalAlignment="Top" Foreground="#404040" Background="#b3b3b3" Width="380" BorderThickness="0,0,0,0"/>
+        <ProgressBar Name="musicProgress" Height="10" Margin="85,86,79,0" VerticalAlignment="Top" Foreground="#404040" Background="#b3b3b3" Width="380" BorderThickness="0,0,0,0" MouseLeftButtonDown="musicProgress_LeftMouseDown"/>
         <Label x:Name="lblCurrentProgress" Content="00:00" FontSize="16" HorizontalContentAlignment="Center"  Margin="6,74,464,0" VerticalAlignment="Top" Height="29" Foreground="#000000" />
         <Label x:Name="lblMaxTime" Content="00:00" FontSize="16" HorizontalContentAlignment="Center" Margin="470,74,6,0" VerticalAlignment="Top" Height="29" Foreground="#000000"/>
 
 
         <Label x:Name="lblCurrentlyPlaying" Content="Currently Playing: " FontSize="14" HorizontalContentAlignment="Left" Margin="10,117,10,0" VerticalAlignment="Top" Height="29" Foreground="#000000"/>
-        <Button x:Name="btnMute" Content="🔊" Margin="472,145,22,0" VerticalAlignment="Top" FontSize="24" Height="50" Width="50" BorderThickness="0,0,0,0" Click="btnMute_Click"/>
-        <Slider x:Name="slider" Margin="63,169,77,0" VerticalAlignment="Top" VerticalContentAlignment="Center" Maximum="30" Value="20" ValueChanged="slider_ValueChanged"  Height="26" MouseDoubleClick="slider_MouseDoubleClick"/>
+        <Button x:Name="btnMute" Content="🔊" Margin="472,146,22,0" VerticalAlignment="Top" FontSize="24" Height="49" Width="50" BorderThickness="0,0,0,0" Click="btnMute_Click"/>
+        <Slider x:Name="slider" Margin="63,169,77,0" VerticalAlignment="Top" VerticalContentAlignment="Center" Maximum="30" Value="10" ValueChanged="slider_ValueChanged"  Height="26"/>
         <Label x:Name="lblVolumeTxt" Content="Volume" HorizontalAlignment="Left" Margin="8,162,0,0" VerticalAlignment="Top" VerticalContentAlignment="Center"/>
         <Button x:Name="btnNightMode" Content="💤" Margin="10,10,484,0" VerticalAlignment="Top" FontSize="24" Width="50" Height="50" BorderThickness="0,0,0,0" Click="btnNightMode_Click"/>
     </Grid>

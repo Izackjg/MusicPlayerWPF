@@ -14,6 +14,9 @@ c:\users\gutman\documents\visual studio 2015\Projects\MusicPlayer\MusicPlayer\ob
 c:\users\gutman\documents\visual studio 2015\Projects\MusicPlayer\MusicPlayer\obj\Debug\MusicPlayer.csproj.GenerateResource.Cache
 c:\users\gutman\documents\visual studio 2015\Projects\MusicPlayer\MusicPlayer\obj\Debug\MusicPlayer.exe
 c:\users\gutman\documents\visual studio 2015\Projects\MusicPlayer\MusicPlayer\obj\Debug\MusicPlayer.pdb
-C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\bin\Debug\policy.2.0.taglib-sharp.dll
-C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\bin\Debug\taglib-sharp.dll
-C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\bin\Debug\policy.2.0.taglib-sharp.config
+C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\obj\Debug\RoundedButton.baml
+C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\obj\Debug\App.baml
+C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\obj\Debug\SettingsWindow.g.cs
+C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\obj\Debug\SettingsWindow.baml
+C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\bin\Debug\Microsoft.WindowsAPICodePack.dll
+C:\Users\Gutman\Documents\Visual Studio 2015\Projects\MusicPlayer\MusicPlayer\bin\Debug\Microsoft.WindowsAPICodePack.Shell.dll
